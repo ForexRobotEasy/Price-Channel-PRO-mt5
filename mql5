@@ -1,0 +1,90 @@
+
+
+//+------------------------------------------------------------------+
+//|                                              Price Channel PRO mt5|
+//|                                https://forexroboteasy.com         |
+//|                                      Developed by Forex Robot Easy Team|
+//+------------------------------------------------------------------+
+
+#property copyright 'Forex Robot Easy Team'
+#property link      'https://forexroboteasy.com'
+#property version   '1.0'
+#property strict
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    IndicatorSetString(INDICATOR_SHORTNAME, 'Price Channel PRO mt5');
+    IndicatorSetInteger(INDICATOR_DIGITS, MarketInfo(_Symbol, MODE_DIGITS));
+    
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+    // Calculate price channel levels
+    double upperLevel[rates_total];
+    double lowerLevel[rates_total];
+    
+    for(int i = 0; i < rates_total; i++)
+    {
+        upperLevel[i] = High[i];
+        lowerLevel[i] = Low[i];
+        
+        // Track price dynamics in relation to intraday range
+        for(int j = i-1; j >= i-10; j--)
+        {
+            if(j < 0) 
+                break;
+            
+            if(High[j] > upperLevel[i])
+                upperLevel[i] = High[j];
+            
+            if(Low[j] < lowerLevel[i])
+                lowerLevel[i] = Low[j];
+        }
+    }
+    
+    // Plot price channel levels
+    for(int i = prev_calculated; i < rates_total; i++)
+    {
+        if(i == 0) 
+            continue;
+        
+        ObjectCreate(0, 'UpperLevel'+IntegerToString(i), OBJ_TREND, 0, Time[i], upperLevel[i]);
+        ObjectSetInteger(0, 'UpperLevel'+IntegerToString(i), OBJPROP_COLOR, clrRed);
+        
+        ObjectCreate(0, 'LowerLevel'+IntegerToString(i), OBJ_TREND, 0, Time[i], lowerLevel[i]);
+        ObjectSetInteger(0, 'LowerLevel'+IntegerToString(i), OBJPROP_COLOR, clrGreen);
+    }
+    
+    return(rates_total);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Remove plotted levels
+    for(int i = ObjectsTotal(0); i >= 0; i--)
+    {
+        string objName = ObjectName(0, i);
+        if(objName == 'UpperLevel' || objName == 'LowerLevel')
+            ObjectDelete(0, objName);
+    }
+}
